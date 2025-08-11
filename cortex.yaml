@@ -1,0 +1,21 @@
+openapi: 3.0.0
+info:
+  title: Inventory Service
+  description: Manages product inventory data, availability, and indexing.
+  x-cortex-tag: inventory-service
+  x-cortex-type: service
+  x-cortex-groups:
+    - platform-services
+    - simulation
+  x-cortex-owners:
+    - type: group
+      name: cortex-workshops/platform-team
+      provider: GITHUB
+  x-cortex-link:
+    - name: README
+      type: docs
+      url: https://github.com/cortex-workshops/inventory-service#readme
+  x-cortex-git:
+    github:
+      repository: cortex-workshops/inventory-service
+      alias: cortex
