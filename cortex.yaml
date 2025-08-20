@@ -19,3 +19,7 @@ info:
     github:
       repository: cortex-workshops/inventory-service
       alias: cortex
+  x-cortex-issues:
+    jira:
+      labels:
+      - name: platform
