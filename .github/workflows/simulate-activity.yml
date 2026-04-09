@@ -18,14 +18,9 @@ jobs:
     env:
       # --- Mirror all candidate secrets into env so bash can pick dynamically ---
       S_PAT_TAYLOR:   ${{ secrets.PAT_TAYLOR }}
-      S_PAT_CATHLEEN: ${{ secrets.PAT_CATHLEEN }}
-      S_PAT_SALLY:    ${{ secrets.PAT_SALLY }}
       S_PAT_JEFF:     ${{ secrets.PAT_JEFF }}
       S_PAT_STEPH:    ${{ secrets.PAT_STEPH }}
       S_PAT_CHASE:    ${{ secrets.PAT_CHASE }}
-      S_PAT_MARION:   ${{ secrets.PAT_MARION }}
-      S_PAT_ROSHNI:   ${{ secrets.PAT_ROSHNI }}
-      S_PAT_GIANPAUL: ${{ secrets.PAT_GIANPAUL }}
 
       # --- Team actors for THIS repo (Platform Team) ---
       ACTORS: |
@@ -35,9 +30,9 @@ jobs:
           {"username":"taylor","git_name":"Taylor Schmidt","git_email":"taylor@cortex.io","pat_secret":"PAT_TAYLOR"}
         ]
 
-      # --- Org-wide reviewer pool (we'll avoid the actor’s own token) ---
+      # --- Org-wide reviewer pool (we'll avoid the actor's own token) ---
       REVIEWER_CANDIDATES: |
-        ["PAT_TAYLOR","PAT_CATHLEEN","PAT_SALLY","PAT_JEFF","PAT_STEPH","PAT_CHASE","PAT_MARION","PAT_ROSHNI","PAT_GIANPAUL"]
+        ["PAT_TAYLOR","PAT_JEFF","PAT_STEPH","PAT_CHASE"]
 
       # --- Delay tuning (minutes) for non-zero time-to-first-review/approval ---
       FIRST_REVIEW_MIN: "12"
@@ -179,11 +174,11 @@ jobs:
         if: steps.auth.outputs.skip != 'true'
         shell: bash
         run: |
-          if [ $((RANDOM % 10)) -lt 7 ]; then
+          if [ $((RANDOM % 10)) -lt 9 ]; then
             URL=$(gh pr create \
               --title "Sim PR by ${AUTHOR}" \
               --body "Automated demo PR at $(date -u). Scenario: ${{ steps.scenario.outputs.value }}" \
-              --base main --head "${BRANCH}" --draft=false || true)
+              --base main --head "${BRANCH}" --draft=false 2>&1) || echo "PR create failed: $URL"
             echo "url=$URL" >> $GITHUB_OUTPUT
           fi
 
@@ -195,7 +190,8 @@ jobs:
           if [ -n "${{ steps.openpr.outputs.url }}" ]; then
             NUM=$(gh pr view "${{ steps.openpr.outputs.url }}" --json number -q .number)
           else
-            NUM=$(gh pr list --state open --author "${AUTHOR}" --json number,createdAt -q 'sort_by(.createdAt) | .[0].number')
+            # Use GitHub username (not git display name) for --author filter
+            NUM=$(gh pr list --state open --author "${{ steps.pick.outputs.username }}" --json number,createdAt -q 'sort_by(.createdAt) | .[0].number')
           fi
           if [ "$NUM" = "null" ] || [ -z "$NUM" ]; then
             echo "number=" >> $GITHUB_OUTPUT
@@ -229,7 +225,7 @@ jobs:
           for i in {1..10}; do
             len=$(jq 'length' <<< "$pool"); [ "$len" -eq 0 ] && break
             idx=$((RANDOM % len))
-            sec=$(jq -r ".[$idx]" <<< "$pool")   # e.g., PAT_JEFF
+            sec=$(jq -r ".[$idx]" <<< "$pool")
             tok_var="S_${sec}"
             tok="${!tok_var}"
             if [ -n "$tok" ]; then chosen="$sec"; break; fi
@@ -319,7 +315,6 @@ jobs:
         if: steps.auth.outputs.skip != 'true' && steps.pr.outputs.number
         shell: bash
         run: |
-          # Use only fields supported by `gh pr view --json`
           gh pr view ${{ steps.pr.outputs.number }} \
             --json state,mergeable,mergeStateStatus,reviewDecision,baseRefName,isDraft \
             -q '
@@ -330,7 +325,6 @@ jobs:
               "baseRefName=" + .baseRefName + "\n" +
               "isDraft=" + (.isDraft|tostring)
             '
-
 
       - name: Maybe (auto) merge PR
         if: steps.auth.outputs.skip != 'true' && steps.pr.outputs.number
